@@ -1,0 +1,45 @@
+apiVersion: community.namjun.kim/v1
+kind: PIIPattern
+metadata:
+  name: email-address
+  version: "1.0.0"
+  maturity: stable
+
+spec:
+  displayName: "Email Address"
+  description: "Detects email addresses in various formats"
+  category: global
+
+  patterns:
+    - regex: '[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}'
+      confidence: high
+
+  maskingStrategy:
+    type: partial
+    showFirst: 2
+    showLast: 0
+    maskChar: "*"
+    preserveFormat: true
+
+  severity: medium
+
+  testCases:
+    shouldMatch:
+      - "user@example.com"
+      - "john.doe@company.co.uk"
+      - "test+label@gmail.com"
+    shouldNotMatch:
+      - "not-an-email"
+      - "@missing-local.com"
+      - "missing-domain@"
+
+  references:
+    - "https://datatracker.ietf.org/doc/html/rfc5322"
+
+  maintainers:
+    - "@bunseokbot"
+
+  tags:
+    - pii
+    - email
+    - global

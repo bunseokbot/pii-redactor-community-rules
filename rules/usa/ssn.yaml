@@ -1,0 +1,52 @@
+apiVersion: community.namjun.kim/v1
+kind: PIIPattern
+metadata:
+  name: ssn-us
+  version: "1.0.0"
+  maturity: stable
+
+spec:
+  displayName: "US Social Security Number"
+  description: "Detects US Social Security Numbers in various formats"
+  category: usa
+
+  patterns:
+    - regex: '\b\d{3}-\d{2}-\d{4}\b'
+      confidence: high
+    - regex: '\b\d{3}\s\d{2}\s\d{4}\b'
+      confidence: high
+    - regex: '\bSSN[:\s]*\d{9}\b'
+      confidence: medium
+
+  maskingStrategy:
+    type: partial
+    showFirst: 0
+    showLast: 4
+    maskChar: "*"
+
+  severity: critical
+
+  testCases:
+    shouldMatch:
+      - "123-45-6789"
+      - "123 45 6789"
+      - "SSN: 123456789"
+      - "My SSN is 987-65-4321"
+    shouldNotMatch:
+      - "123-456-789"
+      - "12-345-6789"
+      - "1234-56-789"
+      - "123-45-678"
+
+  references:
+    - "https://www.ssa.gov/employer/randomization.html"
+    - "https://www.ssa.gov/history/ssn/geocard.html"
+
+  maintainers:
+    - "@bunseokbot"
+
+  tags:
+    - pii
+    - ssn
+    - usa
+    - critical

@@ -1,0 +1,86 @@
+apiVersion: community.namjun.kim/v1
+kind: RuleIndex
+metadata:
+  name: pii-redactor-community-rules
+  version: "1.0.0"
+
+spec:
+  description: "Official PII Redactor Community Rules Repository"
+  homepage: "https://github.com/bunseokbot/pii-redactor-community-rules"
+
+  maintainers:
+    - name: "bunseokbot"
+      email: "bunseokbot@gmail.com"
+      github: "@bunseokbot"
+
+  # Maturity Levels (inspired by Falco rules)
+  maturityLevels:
+    - name: stable
+      description: "Production-ready patterns with extensive testing and community validation"
+      color: "#28a745"
+
+    - name: incubating
+      description: "Patterns under active development, may change in minor versions"
+      color: "#ffc107"
+
+    - name: sandbox
+      description: "Experimental patterns from community, minimal review"
+      color: "#dc3545"
+
+    - name: deprecated
+      description: "Patterns scheduled for removal, migrate to alternatives"
+      color: "#6c757d"
+
+  categories:
+    - name: global
+      displayName: "Global Patterns"
+      description: "Patterns applicable worldwide"
+      path: rules/global
+
+    - name: usa
+      displayName: "USA Patterns"
+      description: "USA-specific PII patterns"
+      path: rules/usa
+
+    - name: korea
+      displayName: "Korea Patterns"
+      description: "Korea-specific PII patterns"
+      path: rules/korea
+
+    - name: eu
+      displayName: "EU Patterns"
+      description: "EU-specific PII patterns"
+      path: rules/eu
+
+    - name: secrets
+      displayName: "Secrets & Credentials"
+      description: "API keys, tokens, and credentials"
+      path: rules/secrets
+
+    - name: compliance/pci-dss
+      displayName: "PCI-DSS Compliance"
+      description: "PCI-DSS compliance patterns"
+      path: rules/compliance/pci-dss
+
+    - name: compliance/hipaa
+      displayName: "HIPAA Compliance"
+      description: "HIPAA compliance patterns"
+      path: rules/compliance/hipaa
+
+    - name: compliance/gdpr
+      displayName: "GDPR Compliance"
+      description: "GDPR compliance patterns"
+      path: rules/compliance/gdpr
+
+  validators:
+    - name: luhn
+      file: validators/luhn.lua
+      description: "Luhn algorithm for credit card validation"
+
+    - name: rrn-checksum
+      file: validators/rrn-checksum.lua
+      description: "Korean RRN checksum validation"
+
+    - name: iban
+      file: validators/iban.lua
+      description: "IBAN checksum validation"

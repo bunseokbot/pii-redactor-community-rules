@@ -1,0 +1,163 @@
+name: Validate Rules
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'rules/**'
+      - 'validators/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'rules/**'
+      - 'validators/**'
+
+jobs:
+  validate:
+    name: Validate PII Patterns
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Install pii-redactor CLI
+        run: |
+          go install github.com/bunseokbot/pii-redactor/cmd/cli@latest
+
+      - name: Validate YAML syntax
+        run: |
+          find rules -name "*.yaml" -o -name "*.yml" | while read file; do
+            echo "Validating YAML syntax: $file"
+            python3 -c "import yaml; yaml.safe_load(open('$file'))" || exit 1
+          done
+
+      - name: Validate pattern schema
+        run: |
+          find rules -name "*.yaml" -o -name "*.yml" | while read file; do
+            echo "Validating pattern schema: $file"
+            # Check required fields
+            python3 << EOF
+          import yaml
+          import sys
+
+          with open('$file') as f:
+              doc = yaml.safe_load(f)
+
+          required_fields = ['apiVersion', 'kind', 'metadata', 'spec']
+          spec_fields = ['displayName', 'description', 'category', 'patterns', 'maskingStrategy', 'severity', 'testCases']
+
+          for field in required_fields:
+              if field not in doc:
+                  print(f"Missing required field: {field}")
+                  sys.exit(1)
+
+          for field in spec_fields:
+              if field not in doc.get('spec', {}):
+                  print(f"Missing spec field: {field}")
+                  sys.exit(1)
+
+          # Check test cases
+          test_cases = doc['spec'].get('testCases', {})
+          if len(test_cases.get('shouldMatch', [])) < 2:
+              print("At least 2 shouldMatch test cases required")
+              sys.exit(1)
+          if len(test_cases.get('shouldNotMatch', [])) < 1:
+              print("At least 1 shouldNotMatch test case required")
+              sys.exit(1)
+
+          # Check maturity level
+          maturity = doc.get('metadata', {}).get('maturity')
+          valid_maturity = ['stable', 'incubating', 'sandbox', 'deprecated']
+          if maturity and maturity not in valid_maturity:
+              print(f"Invalid maturity level: {maturity}. Must be one of: {valid_maturity}")
+              sys.exit(1)
+
+          print(f"✓ {doc['metadata']['name']} ({maturity or 'no maturity'}) validated successfully")
+          EOF
+          done
+
+      - name: Test patterns
+        run: |
+          find rules -name "*.yaml" -o -name "*.yml" | while read file; do
+            echo "Testing patterns in: $file"
+            pii-redactor rules test "$file" || exit 1
+          done
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for duplicate pattern names
+        run: |
+          names=$(find rules -name "*.yaml" -o -name "*.yml" -exec grep -h "^  name:" {} \; | sort)
+          duplicates=$(echo "$names" | uniq -d)
+          if [ -n "$duplicates" ]; then
+            echo "Duplicate pattern names found:"
+            echo "$duplicates"
+            exit 1
+          fi
+          echo "No duplicate pattern names found"
+
+      - name: Verify category directories
+        run: |
+          for dir in rules/*/; do
+            category=$(basename "$dir")
+            find "$dir" -name "*.yaml" -o -name "*.yml" | while read file; do
+              file_category=$(grep "category:" "$file" | head -1 | awk '{print $2}')
+              if [ "$file_category" != "$category" ] && [ "$file_category" != "compliance/$category" ]; then
+                echo "Category mismatch in $file: expected $category, got $file_category"
+                # Allow compliance subcategories
+                if [[ ! "$file_category" =~ ^compliance/ ]]; then
+                  exit 1
+                fi
+              fi
+            done
+          done
+          echo "All categories verified"
+
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: [validate, lint]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          # Get changed files since last tag
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -n "$LAST_TAG" ]; then
+            CHANGES=$(git diff --name-only "$LAST_TAG"..HEAD -- rules/ | head -20)
+          else
+            CHANGES=$(git ls-files rules/)
+          fi
+          echo "changes<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Count patterns
+        id: count
+        run: |
+          COUNT=$(find rules -name "*.yaml" -o -name "*.yml" | wc -l | tr -d ' ')
+          echo "pattern_count=$COUNT" >> $GITHUB_OUTPUT
+
+      - name: Update index
+        run: |
+          echo "Pattern count: ${{ steps.count.outputs.pattern_count }}"
+          # Could auto-generate index.yaml here

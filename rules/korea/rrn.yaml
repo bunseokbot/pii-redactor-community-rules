@@ -1,0 +1,49 @@
+apiVersion: community.namjun.kim/v1
+kind: PIIPattern
+metadata:
+  name: korean-rrn
+  version: "1.0.0"
+  maturity: stable
+
+spec:
+  displayName: "Korean Resident Registration Number"
+  description: "Detects Korean Resident Registration Numbers (RRN)"
+  category: korea
+
+  patterns:
+    - regex: '\d{6}-[1-4]\d{6}'
+      confidence: high
+    - regex: '\d{6}[1-4]\d{6}'
+      confidence: medium
+
+  validator: rrn-checksum
+
+  maskingStrategy:
+    type: partial
+    showFirst: 6
+    showLast: 0
+    maskChar: "*"
+
+  severity: critical
+
+  testCases:
+    shouldMatch:
+      - "920101-1234567"
+      - "850515-2345678"
+      - "9201011234567"
+    shouldNotMatch:
+      - "123456-789012"
+      - "920101-0123456"
+      - "920101-5123456"
+
+  references:
+    - "https://www.law.go.kr/법령/주민등록법"
+
+  maintainers:
+    - "@bunseokbot"
+
+  tags:
+    - pii
+    - rrn
+    - korea
+    - critical
