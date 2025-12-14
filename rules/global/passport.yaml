@@ -1,0 +1,102 @@
+apiVersion: community.namjun.kim/v1
+kind: PIIPattern
+metadata:
+  name: passport-number
+  version: "1.0.0"
+  maturity: incubating
+
+spec:
+  displayName: "Passport Number"
+  description: "Detects passport numbers from various countries"
+  category: global
+
+  patterns:
+    # Korean Passport (Old): Type letter + 8 digits (e.g., M12345678)
+    # S = Single-entry (단수여권), M = Multiple-entry (복수여권)
+    # T = Travel certificate (여행증명서), G = Official (관용여권), D = Diplomatic (외교관여권)
+    - regex: '\b[SMTGD]\d{8}\b'
+      confidence: high
+      note: "Korean passport format (old)"
+
+    # Korean Passport (New): Type letter + 3 digits + 1 letter + 4 digits (e.g., M123A4567)
+    - regex: '\b[SMTGD]\d{3}[A-Z]\d{4}\b'
+      confidence: high
+      note: "Korean passport format (new)"
+
+    # US/UK Passport: 9 digits (requires context keyword to avoid false positives)
+    - regex: '(?i)(?:passport|passeport|여권)[:\s]*\d{9}\b'
+      confidence: high
+      note: "US/UK passport with context keyword (EN/FR/KO)"
+
+    # German Passport: 9 alphanumeric (starts with C, F, G, H, J, K)
+    - regex: '\b[CFGHJK][A-Z0-9]{8}\b'
+      confidence: medium
+      note: "German passport format"
+
+    # French Passport: 2 digits + 2 letters + 5 digits
+    - regex: '\b\d{2}[A-Z]{2}\d{5}\b'
+      confidence: medium
+      note: "French passport format"
+
+    # Japanese Passport: 2 letters + 7 digits
+    - regex: '\b[A-Z]{2}\d{7}\b'
+      confidence: low
+      note: "Japanese passport format (generic pattern, may have false positives)"
+
+    # Chinese Passport: E/G/D/P/S/W + 8 digits
+    - regex: '\b[EGDPSW]\d{8}\b'
+      confidence: medium
+      note: "Chinese passport format"
+
+    # Canadian Passport: 2 letters + 6 digits
+    - regex: '\b[A-Z]{2}\d{6}\b'
+      confidence: low
+      note: "Canadian passport format (generic pattern, may have false positives)"
+
+    # Generic passport with context keyword
+    - regex: '(?i)(?:passport|passeport|여권|パスポート|护照)[:\s#]*[A-Z0-9]{6,9}\b'
+      confidence: high
+      note: "Passport number with keyword context (EN/FR/KO/JP/CN)"
+
+  maskingStrategy:
+    type: partial
+    showFirst: 2
+    showLast: 0
+    maskChar: "*"
+
+  severity: high
+
+  testCases:
+    shouldMatch:
+      - "M12345678"
+      - "S12345678"
+      - "T12345678"
+      - "G12345678"
+      - "D12345678"
+      - "M123A4567"
+      - "S456B7890"
+      - "G789C1234"
+      - "passport: 123456789"
+      - "여권번호: AB1234567"
+      - "E12345678"
+      - "TK1234567"
+    shouldNotMatch:
+      - "12345"
+      - "A12345678"
+      - "M1234A567"
+      - "ABCDEFGHIJ"
+      - "1234567890123"
+
+  references:
+    - "https://www.icao.int/publications/pages/publication.aspx?docnum=9303"
+    - "https://ko.wikipedia.org/wiki/여권"
+
+  maintainers:
+    - "@bunseokbot"
+
+  tags:
+    - pii
+    - passport
+    - global
+    - travel
+    - identity
