@@ -1,4 +1,4 @@
-apiVersion: community.namjun.kim/v1
+apiVersion: pii.namjun.kim/v1alpha1
 kind: PIIPattern
 metadata:
   name: email-address
