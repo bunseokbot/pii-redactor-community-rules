@@ -29,6 +29,7 @@ jobs:
       - name: Install pii-redactor CLI
         run: |
           go install github.com/bunseokbot/pii-redactor/cmd/cli@latest
+          mv $(go env GOPATH)/bin/cli $(go env GOPATH)/bin/pii-redactor
 
       - name: Validate YAML syntax
         run: |
